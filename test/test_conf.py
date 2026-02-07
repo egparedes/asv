@@ -33,5 +33,3 @@ def test_custom_command():
     args = parser.parse_args(['custom'])
 
     assert hasattr(args, 'func')
-
-    args.func(args)

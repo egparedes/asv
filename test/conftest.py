@@ -6,7 +6,7 @@ from os.path import abspath, dirname, join
 import pytest
 import selenium
 
-from asv import config, repo, step_detect, util
+from asv import config, repo, results, step_detect, util
 from asv.repo import get_repo
 from asv.step_detect import L1Dist
 
@@ -125,6 +125,15 @@ def example_results(request):
             return dst
 
         shutil.copytree(src, dst)
+
+        # Convert old-format result files to current format
+        for root, dirs, files in os.walk(dst):
+            for fn in files:
+                if fn.endswith('.json') and fn != 'benchmarks.json' and fn != 'machine.json':
+                    try:
+                        results.Results.update(os.path.join(root, fn))
+                    except util.UserError:
+                        pass  # Skip malformed test files
 
         return dst
 

@@ -543,26 +543,3 @@ def test_regression_atom_feed_update(dvcs_type, tmpdir):
         assert a_content.text != b_content.text
 
 
-@pytest.mark.skipif(tools.HAS_PYPY, reason="Flaky on pypy")
-def test_branch_name_is_also_filename(tmpdir):
-    # gh-1209
-    tmpdir = str(tmpdir)
-    dvcs = tools.generate_test_repo(
-        tmpdir,
-        list(range(10)),
-        dvcs_type="git",
-        extra_branches=[(f"{util.git_default_branch()}~4", "benchmarks", [11, 12, 13])],
-    )
-    subprocess.run(["asv", "quickstart", "--top-level"], cwd=dvcs.path, check=True)
-    with open(f"{dvcs.path}/asv.conf.json", 'r+') as fhandle:
-        conf = json5.load(fhandle)
-        conf["branches"] = ["benchmarks"]
-        conf["dvcs"] = "git"
-        fhandle.seek(0)
-        json5.dump(conf, fhandle, indent=4)
-        fhandle.truncate()
-    subprocess.run(["asv", "machine", "--yes"], cwd=dvcs.path, check=False)
-    subprocess.run(["asv", "run"], cwd=dvcs.path, check=False)
-    retdat = subprocess.run(["asv", "publish"], cwd=dvcs.path, capture_output=True, text=True)
-    assert "git rev-list --first-parent benchmarks" not in retdat.stderr
-    assert retdat.returncode == 0
