@@ -10,17 +10,9 @@ from . import common_args
 
 # This list is ordered in order of average workflow
 command_order = [
-    'Quickstart',
-    'Machine',
-    'Setup',
-    'Run',
-    'Continuous',
-    'Find',
     'Rm',
     'Publish',
     'Preview',
-    'Profile',
-    'Update',
     'Show',
     'Compare',
 ]

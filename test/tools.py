@@ -27,11 +27,10 @@ except ImportError:
     hglib = None
 
 import asv
-from asv import commands, config, environment, runner, util
+from asv import commands, config, util
 from asv.commands.preview import create_httpd
-from asv.plugins.conda import _find_conda
 from asv.repo import get_repo
-from asv.results import Results
+from asv.results import BenchmarkResult, Results
 
 # Two Python versions for testing
 PYTHON_VER1, PYTHON_VER2 = '3.9', ".".join(platform.python_version_tuple()[:2])
@@ -50,53 +49,7 @@ except (RuntimeError, OSError):
     HAS_PYPY = hasattr(sys, 'pypy_version_info')
 
 
-def _check_conda():
-    from asv.plugins.conda import _conda_lock
-
-    conda = _find_conda()
-    with _conda_lock():
-        try:
-            subprocess.check_call(
-                [conda, 'build', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
-        except subprocess.CalledProcessError:
-            raise RuntimeError("conda-build is missing")
-
-
-try:
-    # Conda can install required Python versions on demand
-    _check_conda()
-    HAS_CONDA = True
-except (RuntimeError, OSError):
-    HAS_CONDA = False
-
-
-try:
-    import virtualenv  # noqa: F401 checking if installed
-
-    HAS_VIRTUALENV = True
-except ImportError:
-    HAS_VIRTUALENV = False
-
-
-try:
-    import rattler  # noqa: F401 checking if installed
-
-    HAS_RATTLER = True
-except ImportError:
-    HAS_RATTLER = False
-
-try:
-    util.which('uv')
-    HAS_UV = True
-except (RuntimeError, OSError):
-    HAS_UV = False
-
-try:
-    util.which(f'python{PYTHON_VER2}')
-    HAS_PYTHON_VER2 = True
-except (RuntimeError, OSError):
-    HAS_PYTHON_VER2 = False
+HAS_CONDA = False
 
 
 try:
@@ -108,10 +61,6 @@ except ImportError:
 
 
 WAIT_TIME = 20.0
-
-
-def get_default_environment_type(conf, python):
-    return environment.get_environment_class(conf, python).tool_name
 
 
 @contextmanager
@@ -261,13 +210,13 @@ class Hg:
         if date is None:
             self._fake_date += datetime.timedelta(seconds=1)
             date = self._fake_date
-        date = f"{util.datetime_to_timestamp(date)} 0"
+        date = f"{int(date.timestamp())} 0"
 
         self._repo.commit(message.encode(self.encoding), date=date.encode(self.encoding))
 
     def tag(self, number):
         self._fake_date += datetime.timedelta(seconds=1)
-        date = f"{util.datetime_to_timestamp(self._fake_date)} 0"
+        date = f"{int(self._fake_date.timestamp())} 0"
 
         self._repo.tag(
             [f'tag{number}'.encode(self.encoding)],
@@ -501,7 +450,7 @@ def generate_result_dir(tmpdir, dvcs, values, branches=None, updated=None):
         result = Results(
             {"machine": "tarzan"}, {}, commit, repo.get_date_from_name(commit), "2.7", None, {}
         )
-        value = runner.BenchmarkResult(
+        value = BenchmarkResult(
             result=value,
             samples=[None] * len(value),
             number=[None] * len(value),
@@ -592,72 +541,3 @@ def get_with_retry(browser, url):
     return browser.get(url)
 
 
-def _build_dummy_wheels(tmpdir, wheel_dir, to_build, build_conda=False):
-    # Build fake wheels for testing
-
-    for name, version in to_build:
-        build_dir = join(tmpdir, name + '-' + version)
-        os.makedirs(build_dir)
-
-        with open(join(build_dir, 'setup.py'), 'w') as f:
-            f.write(
-                "from setuptools import setup; "
-                f"setup(name='{name}', version='{version}', packages=['{name}'])"
-            )
-        os.makedirs(join(build_dir, name))
-        with open(join(build_dir, name, '__init__.py'), 'w') as f:
-            f.write(f"__version__ = '{version}'")
-
-        subprocess.check_call(
-            [sys.executable, '-mpip', 'wheel', '-w', wheel_dir, '.'],
-            cwd=build_dir,
-        )
-
-        if build_conda:
-            _build_dummy_conda_pkg(name, version, build_dir, wheel_dir)
-
-
-def _build_dummy_conda_pkg(name, version, build_dir, dst):
-    # Build fake conda packages for testing
-    from asv.plugins.conda import _conda_lock
-
-    build_dir = os.path.abspath(build_dir)
-
-    with open(join(build_dir, 'meta.yaml'), 'w') as f:
-        f.write(
-            textwrap.dedent(f"""\
-        package:
-          name: "{name}"
-          version: "{version}"
-        source:
-          path: {util.shlex_quote(build_dir)}
-        build:
-          number: 0
-          script: "python -m pip install . --no-deps --ignore-installed "
-        requirements:
-          host:
-            - pip
-            - python
-          run:
-            - python
-        about:
-          license: BSD
-          summary: Dummy test package
-        """)
-        )
-
-    conda = _find_conda()
-
-    for pyver in [PYTHON_VER1, PYTHON_VER2]:
-        with _conda_lock():
-            subprocess.check_call(
-                [
-                    conda,
-                    'build',
-                    '--output-folder=' + dst,
-                    '--no-anaconda-upload',
-                    '--python=' + pyver,
-                    '.',
-                ],
-                cwd=build_dir,
-            )

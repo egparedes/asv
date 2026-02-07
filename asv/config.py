@@ -1,6 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import sys
 from pathlib import Path
 
 from . import util
@@ -48,31 +47,16 @@ class Config:
         self.project = "project"
         self.project_url = "#"
         self.repo = None
-        self.repo_subdir = ""
         self.branches = [None]
-        self.pythons = [f"{sys.version_info[0]}.{sys.version_info[1]}"]
-        self.matrix = {}
-        self.exclude = []
-        self.include = []
-        self.env_dir = "env"
         self.benchmark_dir = "benchmarks"
         self.results_dir = "results"
         self.html_dir = "html"
         self.show_commit_url = "#"
         self.hash_length = 8
-        self.environment_type = None
-        self.install_timeout = 600.0
-        self.default_benchmark_timeout = 60.0
         self.dvcs = None
         self.regressions_first_commits = {}
         self.regressions_thresholds = {}
         self.plugins = []
-        self.conda_channels = []
-        self.conda_environment_file = None
-        self.build_command = None
-        self.install_command = None
-        self.uninstall_command = None
-        self.launch_method = None
 
     @classmethod
     def load(cls, path=None):
@@ -94,13 +78,6 @@ class Config:
 
     @classmethod
     def from_json(cls, d):
-        if 'wheel_cache_size' in d:
-            log.warning(
-                "`wheel_cache_size` has been renamed to `build_cache_size`."
-                " Update your `asv.conf.json` accordingly."
-            )
-            d.setdefault('build_cache_size', d['wheel_cache_size'])
-
         conf = cls()
         conf.__dict__.update(d)
 

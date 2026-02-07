@@ -52,21 +52,6 @@ class Repo:
             "as the source."
         )
 
-    def checkout(self, path, commit_hash):
-        """
-        Check out a clean working tree from the current repository
-        to the given path
-
-        Parameters
-        ----------
-        path : str
-            The local path to check out into
-        commit_hash : str
-            The commit hash to check out
-
-        """
-        raise NotImplementedError()
-
     @classmethod
     def url_match(cls, url):
         """
@@ -120,12 +105,6 @@ class Repo:
         """
         raise NotImplementedError()
 
-    def get_hash_from_parent(self, name):
-        """
-        Checkout the parent of the currently checked out commit.
-        """
-        raise NotImplementedError()
-
     def get_name_from_hash(self, commit):
         """
         Get a symbolic name for a commit, if it exists.
@@ -165,66 +144,6 @@ class Repo:
         """
         raise NotImplementedError()
 
-    def get_new_branch_commits(self, branches, existing):
-        """
-        Return a set of new commits on `branches` that are successors of all
-        `existing` commits.
-
-        Returns
-        -------
-        commit_hashes
-            New commit hashes
-        all_commit_hashes
-            All branch commit hashes
-        """
-        new = set()
-        new_commits = []
-        for branch in branches:
-            for commit in self.get_branch_commits(branch):
-                if commit in existing:
-                    break
-                if commit not in new:
-                    new.add(commit)
-                    new_commits.append(commit)
-        return new_commits
-
-    def filter_date_period(self, commits, period, old_commits=None):
-        """
-        Pick a subset of `commits` such that the dates are spaced at least
-        by `period` seconds.
-
-        If `old_commits` are given, consider also them in the selection,
-        but omit them from the returned list.
-
-        The initial part of the selection remains stable if new commits
-        with newer dates are added.
-        """
-        if old_commits is None:
-            old_commits = []
-
-        old_commits = set(old_commits)
-
-        items = []
-        for commit in set(commits).union(old_commits):
-            items.append((self.get_date(commit), commit))
-        items.sort()
-
-        # JS date
-        period = period * 1000
-
-        # Pick a subset of commits
-        prev_date = None
-        selected = set()
-        for date, commit in items:
-            if prev_date is None or date >= prev_date + period:
-                prev_date = date
-                if commit not in old_commits:
-                    selected.add(commit)
-
-        # Preserve original ordering
-        return [commit for commit in commits if commit in selected]
-
-
 class NoRepository(Repo):
     """
     Project installed in the current environment
@@ -243,16 +162,9 @@ class NoRepository(Repo):
             "operations requiring repository are not possible"
         )
 
-    def _check_branch(self, branch):
-        if branch is not None:
-            self._raise_error()
-
     @classmethod
     def url_match(cls, url):
         return False
-
-    def checkout(self, path, commit_hash):
-        self._check_branch(commit_hash)
 
     def get_date(self, hash):
         if hash is None:
@@ -264,9 +176,6 @@ class NoRepository(Repo):
 
     def get_hash_from_name(self, name):
         return None
-
-    def get_hash_from_parent(self, name):
-        self._raise_error()
 
     def get_name_from_hash(self, commit):
         return None
@@ -284,8 +193,6 @@ class NoRepository(Repo):
     def get_branch_commits(self, branch):
         self._raise_error()
 
-    def get_new_branch_commits(self, branches, existing):
-        self._raise_error()
 
 
 def get_repo(conf):

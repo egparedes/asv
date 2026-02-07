@@ -24,33 +24,21 @@ class Hg(Repo):
     _encoding = "utf-8"
 
     def __init__(self, url, mirror_path):
-        # TODO: shared repositories in Mercurial are only possible
-        # through an extension, and it's not clear how to use those in
-        # this context.  So here, we always make full clones for
-        # each of the environments.
-
-        self._repo = None  # Initialize
+        self._repo = None
         self._path = os.path.abspath(mirror_path)
         self._pulled = False
         if hglib is None:
             raise ImportError("hglib")
 
         if self.is_local_repo(url):
-            # Local repository, no need for mirror
             self._path = os.path.abspath(url)
             self._pulled = True
-        elif not self.is_local_repo(self._path):
-            if os.path.exists(self._path):
-                self._raise_bad_mirror_error(self._path)
-
-            # Clone is missing
-            log.info("Cloning project")
-            url = url.removeprefix("hg+")
-
-            # Mercurial branches are global, so there is no need for
-            # an analog of git --mirror
-            hglib.clone(
-                self._encode_filename(url), dest=self._encode_filename(self._path), noupdate=True
+        elif self.is_local_repo(self._path):
+            pass
+        else:
+            raise util.UserError(
+                f"Repository '{url}' is not available locally at '{self._path}'. "
+                "A local repository or mirror is required for analysis."
             )
 
         self._repo = hglib.open(self._encode_filename(self._path))
@@ -103,27 +91,6 @@ class Hg(Repo):
         self._repo.pull()
         self._pulled = True
 
-    def checkout(self, path, commit_hash):
-        # Need to pull -- the copy is not updated automatically, since
-        # the repository data is not shared
-
-        def checkout_existing():
-            with hglib.open(self._encode_filename(path)) as subrepo:
-                subrepo.pull()
-                subrepo.update(self._encode(commit_hash), clean=True)
-                subrepo.rawcommand([b"--config", b"extensions.purge=", b"purge", b"--all"])
-
-        if os.path.isdir(path):
-            try:
-                checkout_existing()
-            except (hglib.error.CommandError, hglib.error.ServerError):
-                # Remove and re-clone
-                util.long_path_rmtree(path)
-
-        if not os.path.isdir(path):
-            hglib.clone(self._encode_filename(self._path), dest=self._encode_filename(path))
-            checkout_existing()
-
     def get_date(self, hash):
         # TODO: This works on Linux, but should be extended for other platforms
         rev = self._repo.log(self._encode(hash))[0]
@@ -142,9 +109,6 @@ class Hg(Repo):
             if b'unknown revision' in err.err:
                 raise NoSuchNameError(name)
             raise
-
-    def get_hash_from_parent(self, name):
-        return self.get_hash_from_name(f'p1({name})')
 
     def get_name_from_hash(self, commit):
         # XXX: implement

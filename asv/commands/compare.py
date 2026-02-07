@@ -10,7 +10,6 @@ from asv_runner.statistics import get_err
 from .. import _stats, util
 from ..benchmarks import Benchmarks
 from ..console import log
-from ..environment import get_environments
 from ..machine import iter_machine_files
 from ..repo import NoSuchNameError, get_repo
 from ..results import iter_results_for_machine_and_hash
@@ -159,9 +158,7 @@ class Compare(Command):
             pass
 
         if env_spec:
-            env_names = [
-                env.name for env in get_environments(conf, env_spec, verbose=False)
-            ] + list(env_spec)
+            env_names = list(env_spec)
         else:
             env_names = None
 

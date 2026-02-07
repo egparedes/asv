@@ -7,7 +7,7 @@ from os.path import join
 
 import pytest
 
-from asv import results, runner, util
+from asv import results, util
 
 
 def _truncate_floats(item, digits=5):
@@ -80,7 +80,7 @@ def test_results(tmpdir):
         }
 
         for key, val in values.items():
-            v = runner.BenchmarkResult(
+            v = results.BenchmarkResult(
                 result=val['result'],
                 samples=val['samples'],
                 number=val['number'],
@@ -193,9 +193,9 @@ def test_json_timestamp(tmpdir):
     duration = 1.5
 
     r = results.Results(
-        {'machine': 'mach'}, {}, 'aaaa', util.datetime_to_timestamp(stamp0), 'py', 'env', {}
+        {'machine': 'mach'}, {}, 'aaaa', int(stamp0.timestamp()), 'py', 'env', {}
     )
-    value = runner.BenchmarkResult(
+    value = results.BenchmarkResult(
         result=[42], samples=[None], number=[None], profile=None, errcode=0, stderr=''
     )
     benchmark = {'name': 'some_benchmark', 'version': 'some version', 'params': []}
@@ -253,10 +253,10 @@ def test_remove_samples():
 
     r = results.Results.unnamed()
 
-    v1 = runner.BenchmarkResult(
+    v1 = results.BenchmarkResult(
         result=[True], samples=[[1]], number=[1], profile=None, errcode=0, stderr=''
     )
-    v2 = runner.BenchmarkResult(
+    v2 = results.BenchmarkResult(
         result=[True] * 3,
         samples=[[1], [2], [3]],
         number=[1, 1, 1],

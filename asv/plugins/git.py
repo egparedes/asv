@@ -20,20 +20,18 @@ class Git(Repo):
         self._git = util.which("git")
         self._path = os.path.abspath(mirror_path)
         self._pulled = False
-        # default branch
         self._default_branch = util.git_default_branch()
 
         if self.is_local_repo(url):
-            # Local repository, no need for mirror
             self._path = os.path.abspath(url)
             self._pulled = True
-        elif not self.is_local_repo(self._path):
-            if os.path.exists(self._path):
-                self._raise_bad_mirror_error(self._path)
-
-            # Clone is missing
-            log.info("Cloning project")
-            self._run_git(['clone', '--mirror', url, self._path], cwd=None)
+        elif self.is_local_repo(self._path):
+            pass
+        else:
+            raise util.UserError(
+                f"Repository '{url}' is not available locally at '{self._path}'. "
+                "A local repository or mirror is required for analysis."
+            )
 
     @classmethod
     def is_local_repo(cls, path):
@@ -85,41 +83,6 @@ class Git(Repo):
         self._run_git(['fetch', 'origin'])
         self._pulled = True
 
-    def checkout(self, path, commit_hash):
-        def checkout_existing(display_error):
-            # Deinit fails if no submodules, so ignore its failure
-            self._run_git(
-                ['-c', 'protocol.file.allow=always', 'submodule', 'deinit', '-f', '.'],
-                cwd=path,
-                display_error=False,
-                valid_return_codes=None,
-            )
-            self._run_git(['checkout', '-f', commit_hash], cwd=path, display_error=display_error)
-            self._run_git(['clean', '-fdx'], cwd=path, display_error=display_error)
-            self._run_git(
-                [
-                    '-c',
-                    'protocol.file.allow=always',
-                    'submodule',
-                    'update',
-                    '--init',
-                    '--recursive',
-                ],
-                cwd=path,
-                display_error=display_error,
-            )
-
-        if os.path.isdir(path):
-            try:
-                checkout_existing(display_error=False)
-            except util.ProcessError:
-                # Remove and try to re-clone
-                util.long_path_rmtree(path)
-
-        if not os.path.isdir(path):
-            self._run_git(['clone', '--shared', '--recursive', self._path, path], cwd=None)
-            checkout_existing(display_error=True)
-
     def get_date(self, hash):
         return (
             int(
@@ -159,9 +122,6 @@ class Git(Repo):
                 # Name does not exist
                 raise NoSuchNameError(name)
             raise
-
-    def get_hash_from_parent(self, name):
-        return self.get_hash_from_name(name + '^')
 
     def get_name_from_hash(self, commit):
         try:

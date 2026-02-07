@@ -69,22 +69,6 @@ class ParallelFailure(Exception):
             raise self
 
 
-def human_list(input_list):
-    """
-    Formats a list of strings in a human-friendly way.
-    """
-    input_list = [f"'{x}'" for x in input_list]
-
-    if len(input_list) == 0:
-        return 'nothing'
-    elif len(input_list) == 1:
-        return input_list[0]
-    elif len(input_list) == 2:
-        return ' and '.join(input_list)
-    else:
-        return ', '.join(input_list[:-1]) + ' and ' + input_list[-1]
-
-
 def human_file_size(size, err=None):
     """
     Returns a human-friendly string representing a file size
@@ -231,18 +215,6 @@ def which(filename, paths=None):
         raise OSError(f"Could not find '{filename}' in {loc_info}")
 
     return candidates[0]
-
-
-def has_command(filename):
-    """
-    Returns `True` if the commandline utility exists.
-    """
-    try:
-        which(filename)
-    except OSError:
-        return False
-    else:
-        return True
 
 
 class ProcessError(subprocess.CalledProcessError):
@@ -793,48 +765,6 @@ def update_json(cls, path, api_version, compact=False):
         )
 
 
-def iter_chunks(s, n):
-    """
-    Iterator that returns elements from s in chunks of size n.
-    """
-    chunk = []
-    for x in s:
-        chunk.append(x)
-        if len(chunk) == n:
-            yield chunk
-            chunk = []
-    if len(chunk):
-        yield chunk
-
-
-def pick_n(items, n):
-    """Pick n items, attempting to get equal index spacing."""
-    if not (n > 0):
-        raise ValueError("Invalid number of items to pick")
-    spacing = max(float(len(items)) / n, 1)
-    spaced = []
-    i = 0
-    while int(i) < len(items) and len(spaced) < n:
-        spaced.append(items[int(i)])
-        i += spacing
-    return spaced
-
-
-def get_multiprocessing(parallel):
-    """
-    If parallel indicates that we want to do multiprocessing,
-    imports the multiprocessing module and sets the parallel
-    value accordingly.
-    """
-    if parallel != 1:
-        import multiprocessing
-
-        if parallel <= 0:
-            parallel = multiprocessing.cpu_count()
-        return parallel, multiprocessing
-    return parallel, None
-
-
 def iter_subclasses(cls):
     """
     Returns all subclasses of a class.
@@ -851,62 +781,6 @@ def hash_equal(a, b):
     """
     min_len = min(len(a), len(b))
     return a.lower()[:min_len] == b.lower()[:min_len]
-
-
-def get_cpu_info():
-    """
-    Gets a human-friendly description of this machine's CPU.
-
-    Returns '' if it can't be obtained.
-    """
-    if sys.platform.startswith('linux'):
-        with open("/proc/cpuinfo", "rb") as fd:
-            lines = fd.readlines()
-        for line in lines:
-            if b':' in line:
-                key, val = line.split(b':', 1)
-                key = key.strip()
-                val = val.strip()
-                if key == b'model name':
-                    return val.decode('ascii')
-    elif sys.platform.startswith('darwin'):
-        sysctl = which('sysctl')
-        return check_output([sysctl, '-n', 'machdep.cpu.brand_string']).strip()
-    elif sys.platform.startswith('win'):
-        try:
-            from win32com.client import GetObject
-
-            cimv = GetObject(r"winmgmts:root\cimv2")
-            return cimv.ExecQuery("Select Name from Win32_Processor")[0].name
-        except Exception:
-            pass
-    return ''
-
-
-def get_memsize():
-    """
-    Returns the amount of physical memory in this machine.
-
-    Returns '' if it can't be obtained.
-    """
-    if sys.platform.startswith('linux'):
-        with open("/proc/meminfo", "rb") as fd:
-            lines = fd.readlines()
-        for line in lines:
-            if b':' in line:
-                key, val = line.split(b':', 1)
-                key = key.strip()
-                val = val.strip()
-                if key == b'MemTotal':
-                    if val.endswith(b' kB'):
-                        units = 1024
-                    else:
-                        units = 1
-                    return int(val.split()[0]) * units
-    elif sys.platform.startswith('darwin'):
-        sysctl = which('sysctl')
-        return int(check_output([sysctl, '-n', 'hw.memsize']).strip())
-    return ''
 
 
 def format_text_table(rows, num_headers=0, top_header_span_start=0, top_header_text=None):
@@ -973,13 +847,6 @@ def _datetime_to_timestamp(dt, divisor):
     if remainder >= divisor // 2:
         value += 1
     return value
-
-
-def datetime_to_timestamp(dt):
-    """
-    Convert a Python datetime object to a UNIX timestamp.
-    """
-    return _datetime_to_timestamp(dt, 10**6)
 
 
 def datetime_to_js_timestamp(dt):
@@ -1126,128 +993,6 @@ def sanitize_filename(filename):
     return filename
 
 
-def namedtuple_with_doc(name, slots, doc):
-    cls = collections.namedtuple(name, slots)
-    cls.__doc__ = doc
-    return cls
-
-
-def recvall(sock, size):
-    """
-    Receive data of given size from a socket connection
-    """
-    data = b""
-    while len(data) < size:
-        s = sock.recv(size - len(data))
-        data += s
-        if not s:
-            raise RuntimeError(
-                f"did not receive data from socket (size {size}, got only {data!r})"
-            )
-    return data
-
-
-def interpolate_command(command, variables):
-    """
-    Parse a command with interpolated variables to a sequence of commands.
-
-    The command is parsed as in posix-style shell (by shlex) and split to
-    parts. Additional constructs recognized:
-
-    - ``ENVVAR=value <command>``: parsed as declaring an environment variable
-      named 'ENVVAR'.
-    - ``return-code=value <command>``: parsed as declaring valid return codes.
-    - ``in-dir=value <command>``: parsed as declaring working directory for command.
-
-    Parameters
-    ----------
-    command : str
-        Command to execute, posix shell style.
-    variables : dict
-        Interpolation variables.
-
-    Returns
-    -------
-    command : list of str
-        Command arguments.
-    env : dict
-        Environment variables declared in the command.
-    return_codes : {set, int, None}
-        Valid return codes.
-    cwd : {str, None}
-        Current working directory for the command, if any.
-
-    """
-
-    parts = shlex.split(command)
-
-    try:
-        result = [c.format(**variables) for c in parts]
-    except KeyError as exc:
-        raise UserError(
-            f"Configuration error: {{{exc.args[0]}}} not available "
-            f"when substituting into command {command!r} "
-            f"Available: {variables!r}"
-        )
-
-    env = {}
-
-    return_codes_set = False
-    return_codes = {0}
-    cwd = None
-
-    while result:
-        m = re.match('^([A-Za-z_][A-Za-z0-9_]*)=(.*)$', result[0])
-        if m:
-            env[m.group(1)] = m.group(2)
-            del result[0]
-            continue
-
-        if result[0].startswith('return-code='):
-            if return_codes_set:
-                raise UserError(
-                    "Configuration error: multiple return-code specifications "
-                    f"in command {command!r} "
-                )
-                break
-
-            if result[0] == 'return-code=any':
-                return_codes = None
-                return_codes_set = True
-                del result[0]
-                continue
-
-            m = re.match('^return-code=([0-9,]+)$', result[0])
-            if m:
-                try:
-                    return_codes = {int(x) for x in m.group(1).split(",")}
-                    return_codes_set = True
-                    del result[0]
-                    continue
-                except ValueError:
-                    pass
-
-            raise UserError(
-                "Configuration error: invalid return-code specification "
-                f"{result[0]!r} when substituting into command {command!r} "
-            )
-
-        if result[0].startswith('in-dir='):
-            if cwd is not None:
-                raise UserError(
-                    f"Configuration error: multiple in-dir specifications in command {command!r} "
-                )
-                break
-
-            cwd = result[0][7:]
-            del result[0]
-            continue
-
-        break
-
-    return result, env, return_codes, cwd
-
-
 def truncate_float_list(item, digits=5):
     """
     Truncate floating-point numbers (in a possibly nested list)
@@ -1273,37 +1018,10 @@ def _init_global_locks(lock_dict, env):
     os.environ.update(env)
 
 
-def new_multiprocessing_lock(name):
-    """Create a new global multiprocessing lock"""
-    _global_locks[name] = multiprocessing.Lock()
-
-
-def get_multiprocessing_lock(name):
-    """Get an existing global multiprocessing lock"""
-    return _global_locks[name]
-
-
 def get_multiprocessing_pool(parallel=None):
     """Create a multiprocessing.Pool, managing global locks properly"""
     env = os.environ.copy()
     return multiprocessing.Pool(parallel, initializer=_init_global_locks, initargs=(_global_locks, env))
-
-
-try:
-    from shlex import quote as shlex_quote
-except ImportError:
-    _find_unsafe = re.compile(r'[^\w@%+=:,./-]').search
-
-    def shlex_quote(s):
-        """Return a shell-escaped version of the string *s*."""
-        if not s:
-            return "''"
-        if _find_unsafe(s) is None:
-            return s
-
-        # use single quotes, and put single quotes into double quotes
-        # the string $'b is then quoted as '$'"'"'b'
-        return "'" + s.replace("'", "'\"'\"'") + "'"
 
 
 def git_default_branch():
@@ -1330,171 +1048,3 @@ def git_default_branch():
     return default_branch
 
 
-def search_channels(cli_path, pkg, version):
-    try:
-        result = subprocess.run(
-            [cli_path, "search", f"{pkg}=={version}"], capture_output=True, text=True, check=False
-        )
-    except subprocess.CalledProcessError as e:
-        print(f"Error searching for {pkg} {version}, got:\n {e}", file=sys.stderr)
-        return False
-    if f"No match found for: {pkg}=={version}." in result.stdout:
-        return False
-    # Worked!
-    return True
-
-
-class ParsedPipDeclaration:
-    def __init__(self, declaration):
-        self.pkgname = None
-        self.specification = None
-        self.flags = []
-        self.is_editable = False
-        self.path = None
-
-        self._parse_declaration(declaration)
-
-        if not self.pkgname and not self.path:
-            raise ValueError(
-                "Either a valid package name or a path must be present in the declaration."
-            )
-
-    def _parse_declaration(self, declaration):
-        # Match flags with values
-        flag_with_value_pattern = (
-            r'(--[\w-]+='  # Match the flag name
-            r'\"[^\"]+\")'  # Match the value in double quotes
-        )
-        flag_values = re.findall(flag_with_value_pattern, declaration)
-        for flag_value in flag_values:
-            self.flags.append(flag_value)
-            declaration = declaration.replace(flag_value, '', 1)
-
-        # Match git URLs
-        git_url_pattern = (
-            r'(git\+https:\/\/[a-zA-Z0-9-_\/.]+)'  # match the git URL
-            r'(?:@([a-zA-Z0-9-_\/.]+))?'  # optional branch or tag
-            r'(?:#egg=([a-zA-Z0-9-_]+))?'  # optional egg fragment
-        )
-        git_url_match = re.search(git_url_pattern, declaration)
-
-        # If there's a git URL match, remove it from the declaration
-        if git_url_match:
-            self.path = git_url_match.group(1)
-            branch_or_tag = git_url_match.group(2)
-            if branch_or_tag:
-                self.path += f"@{branch_or_tag}"
-            if git_url_match.group(3):
-                self.pkgname = git_url_match.group(3)
-            declaration = declaration.replace(git_url_match.group(0), '', 1)
-
-        # Match local paths
-        local_pattern = (
-            r'(\.\/[a-zA-Z0-9-_]+\/?'  # Relative path starting with ./
-            r'|\.\.\/[a-zA-Z0-9-_]+\/?'  # Relative path starting with ../
-            r'|\/\w+\/?)'  # Absolute path
-        )
-        local_match = re.search(local_pattern, declaration)
-
-        # If there's a local path match, remove it from the declaration
-        if local_match:
-            self.path = local_match.group(1)
-            declaration = declaration.replace(local_match.group(0), '', 1)
-
-        # Match flags
-        flags_pattern = (
-            r'(?:^|\s)'  # Match start or whitespace
-            r'(-[a-zA-Z]|'  # Single-letter flags
-            r'--\w+(?:-\w+)*)'  # Double-dash flags
-        )
-        flags = re.findall(flags_pattern, declaration)
-        if flags:
-            self.flags.extend(flags)
-            if "-e" in self.flags:
-                self.is_editable = True
-
-        # Remove matched flags from declaration
-        for flag in self.flags:
-            declaration = declaration.replace(flag, '', 1)
-
-        # Match package details
-        pkg_pattern = (
-            r'(?P<name>[a-zA-Z0-9-_]+)'  # Name
-            r'('  # Start group for version specification(s)
-            r'((?P<specifier>[<>!=~]{1,2})'  # Version specifier
-            r'(?P<version>[0-9.a-zA-Z_-]+))'  # Version
-            r'((?P<multi_spec>,[<>!=~]{1,2}[0-9.a-zA-Z_-]+)*)?'  # Multiple version specifications
-            r')?'  # End optional group for version specification(s)
-        )
-        pkg_match = re.search(pkg_pattern, declaration)
-
-        # Populate attributes based on package details matches
-        if pkg_match:
-            self.pkgname = pkg_match.group("name")
-            specifier = pkg_match.group("specifier")
-            version = pkg_match.group("version")
-            multi_spec = pkg_match.group("multi_spec")
-
-            # If a specifier is present, prioritize it and consume version(s) greedily
-            if specifier:
-                self.specification = f"{specifier}{version}{multi_spec or ''}"
-            else:
-                declaration = declaration.replace(pkg_match.group("name"), '', 1)
-                version_match = re.search(r'(?P<version>\d+(\.\d+)*([a-zA-Z0-9]+)?)', declaration)
-                if version_match:
-                    self.specification = f"=={version_match.group(0)}"
-
-
-def construct_pip_call(pip_caller, parsed_declaration: ParsedPipDeclaration):
-    pargs = ['install', '-v', '--upgrade']
-
-    if parsed_declaration.flags:
-        pargs += parsed_declaration.flags
-    if parsed_declaration.path:
-        pargs.append(parsed_declaration.path)
-    elif parsed_declaration.pkgname:
-        if parsed_declaration.specification:
-            pargs.append(f"{parsed_declaration.pkgname}{parsed_declaration.specification}")
-        else:
-            pargs.append(parsed_declaration.pkgname)
-
-    return functools.partial(pip_caller, pargs)
-
-
-if hasattr(sys, 'pypy_version_info'):
-    ON_PYPY = True
-else:
-    ON_PYPY = False
-
-
-def get_matching_environment(environments, result=None):
-    return next(
-        (
-            env
-            for env in environments
-            if (result is None or result.env_name == env.name)
-            and env_py_is_sys_version(env.python)
-        ),
-        None,
-    )
-
-
-def replace_cpython_version(arg, new_version):
-    match = re.match(r"^python(\W|$)", arg)
-    if match and not match.group(1).isalnum():
-        return f"python={new_version}"
-    else:
-        return arg
-
-
-def extract_cpython_version(env_python):
-    version_regex = r"(\d+\.\d+)$"
-    match = re.search(version_regex, env_python)
-    if match:
-        return match.group(1)
-    else:
-        return None
-
-
-def env_py_is_sys_version(env_python):
-    return extract_cpython_version(env_python) == "{}.{}".format(*sys.version_info[:2])

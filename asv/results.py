@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 import base64
+import collections
 import datetime
 import hashlib
 import itertools
@@ -12,9 +13,26 @@ import zlib
 
 from asv_runner.statistics import compute_stats, get_err
 
-from . import environment, util
+from . import util
 from .console import log
 from .machine import Machine
+
+
+BenchmarkResult = collections.namedtuple(
+    'BenchmarkResult',
+    ['result', 'samples', 'number', 'errcode', 'stderr', 'profile'],
+)
+
+
+def _compat_get_env_name(python, requirements):
+    """Backward-compat env name generation for api_version 1 result files."""
+    name = [f"py{python}"]
+    for key, val in sorted(requirements.items()):
+        if val:
+            name.append(''.join([key, val]))
+        else:
+            name.append(key)
+    return util.sanitize_filename('-'.join(name))
 
 
 def iter_results_paths(results):
@@ -431,7 +449,7 @@ class Results:
         benchmark : dict
             Benchmark object
 
-        result : runner.BenchmarkResult
+        result : BenchmarkResult
             Result of the benchmark.
 
         started_at : datetime.datetime, optional
@@ -790,7 +808,7 @@ class Results:
             d2['commit_hash'] = d['commit_hash']
             d2['date'] = d['date']
             d2['env_name'] = d.get(
-                'env_name', environment.get_env_name('', d['python'], d['requirements'], {})
+                'env_name', _compat_get_env_name(d['python'], d['requirements'])
             )
             d2['params'] = d['params']
             d2['python'] = d['python']

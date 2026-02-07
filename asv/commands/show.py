@@ -8,11 +8,9 @@ from asv_runner.console import color_print
 from .. import util
 from ..benchmarks import Benchmarks
 from ..console import log
-from ..environment import get_environments
 from ..machine import iter_machine_files
 from ..repo import NoSuchNameError, get_repo
-from ..results import iter_results_for_machine, iter_results_for_machine_and_hash
-from ..runner import format_benchmark_result
+from ..results import format_benchmark_result, iter_results_for_machine, iter_results_for_machine_and_hash
 from ..util import load_json
 from . import Command, common_args
 
@@ -65,9 +63,7 @@ class Show(Command):
         durations=False,
     ):
         if env_spec:
-            env_names = [
-                env.name for env in get_environments(conf, env_spec, verbose=False)
-            ] + list(env_spec)
+            env_names = list(env_spec)
         else:
             env_names = None
 

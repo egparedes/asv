@@ -1,29 +1,19 @@
-import contextlib
 import os
 import shutil
-import sys
 import textwrap
-from os.path import abspath, dirname, join, relpath
+from os.path import abspath, dirname, join
 
 import pytest
 import selenium
 
-from asv import config, environment, repo, step_detect, util
+from asv import config, repo, step_detect, util
 from asv.repo import get_repo
 from asv.step_detect import L1Dist
 
 from . import tools
-from .test_benchmarks import ASV_CONF_JSON, BENCHMARK_DIR
 from .test_web import _rebuild_basic_html
 from .tools import (
-    DUMMY1_VERSION,
-    DUMMY2_VERSIONS,
-    HAS_CONDA,
-    PYTHON_VER1,
-    PYTHON_VER2,
     WAIT_TIME,
-    WIN,
-    _build_dummy_wheels,
     locked_cache_dir,
     run_asv_with_conf,
 )
@@ -61,99 +51,6 @@ def pytest_addoption(parser):
         ),
     )
     parser.addoption("--runflaky", action="store_true", default=False, help="run flaky tests")
-    parser.addoption(
-        "--environment-type",
-        action="store",
-        default="virtualenv",
-        choices=("conda", "virtualenv", "rattler", "uv"),
-        help="environment_type to use in tests by default",
-    )
-
-
-def generate_basic_conf(
-    tmpdir, repo_subdir='', values=DUMMY_VALUES, dummy_packages=True, conf_version=1
-):
-    # conf_version allows to generate different configurations with this same function
-    assert conf_version in (1, 2)
-    tmpdir = str(tmpdir)
-    local = abspath(dirname(__file__))
-    os.chdir(tmpdir)
-
-    # Use relative paths on purpose since this is what will be in
-    # actual config files
-
-    shutil.copytree(os.path.join(local, 'benchmark'), 'benchmark')
-
-    machine_file = join(tmpdir, 'asv-machine.json')
-
-    shutil.copyfile(join(local, 'asv-machine.json'), machine_file)
-
-    # values not in test_dev.py copy
-    repo_path = tools.generate_test_repo(tmpdir, values, subdir=repo_subdir).path
-    global env_type
-
-    conf_dict = {
-        'env_dir': 'env',
-        'benchmark_dir': 'benchmark',
-        'results_dir': 'results_workflow',
-        'html_dir': 'html',
-        'repo': relpath(repo_path),
-        'environment_type': env_type,
-        'project': 'asv',
-        'conda_channels': ["conda-forge"],
-        'dvcs': 'git',
-        'matrix': {
-            "pip+asv-dummy-test-package-1": [None],
-            "pip+asv-dummy-test-package-2": tools.DUMMY2_VERSIONS,
-        },
-    }
-    if not dummy_packages:
-        conf_dict['matrix'] = {}
-    elif conf_version == 2:
-        conf_dict['matrix'] = {
-            "pip+asv_dummy_test_package_1": [""],
-            "pip+asv_dummy_test_package_2": tools.DUMMY2_VERSIONS,
-        }
-    if repo_subdir:
-        conf_dict['repo_subdir'] = repo_subdir
-
-    conf = config.Config.from_json(conf_dict)
-
-    if hasattr(sys, 'pypy_version_info'):
-        conf.pythons = [f"pypy{sys.version_info[0]}.{sys.version_info[1]}"]
-
-    return tmpdir, local, conf, machine_file
-
-
-def pytest_sessionstart(session):
-    _monkeypatch_conda_lock(session.config)
-
-    # Unregister unwanted environment types
-    # XXX: Ugly hack to get the variable into generate_basic_conf
-    global env_type
-    env_type = session.config.getoption('environment_type')
-    if env_type is not None:
-        import asv.environment
-        import asv.util
-
-        for cls in asv.util.iter_subclasses(asv.environment.Environment):
-            cls.matches_python_fallback = cls.tool_name in (env_type, "existing")
-
-
-def _monkeypatch_conda_lock(config):
-    import filelock
-
-    import asv.plugins.conda
-    import asv.util
-
-    @contextlib.contextmanager
-    def _conda_lock():
-        conda_lock = asv.util.get_multiprocessing_lock("conda_lock")
-        with conda_lock, filelock.FileLock(str(path)):
-            yield
-
-    path = config.cache.makedir('conda-lock') / 'lock'
-    asv.plugins.conda._conda_lock = _conda_lock
 
 
 @pytest.fixture(
@@ -218,29 +115,6 @@ def two_branch_repo_case(request, tmpdir):
     return dvcs, master, r, conf
 
 
-@pytest.fixture
-def basic_conf(tmpdir, dummy_packages):
-    return generate_basic_conf(tmpdir)
-
-
-@pytest.fixture
-def basic_conf_2(tmpdir, dummy_packages):
-    return generate_basic_conf(tmpdir, conf_version=2)
-
-
-@pytest.fixture
-def basic_conf_with_subdir(tmpdir, dummy_packages):
-    return generate_basic_conf(tmpdir, 'some_subdir')
-
-
-@pytest.fixture
-def existing_env_conf(tmpdir):
-    tmpdir, local, conf, machine_file = generate_basic_conf(tmpdir)
-    conf.environment_type = "existing"
-    conf.pythons = ["same"]
-    return tmpdir, local, conf, machine_file
-
-
 @pytest.fixture(scope="session")
 def example_results(request):
     with locked_cache_dir(request.config, "example-results") as cache_dir:
@@ -251,14 +125,6 @@ def example_results(request):
             return dst
 
         shutil.copytree(src, dst)
-
-        src_machine = join(dirname(__file__), 'asv-machine.json')
-        dst_machine = join(cache_dir, 'asv-machine.json')
-        shutil.copyfile(src_machine, dst_machine)
-
-        # Convert to current file format
-        conf = config.Config.from_json({'results_dir': dst, 'repo': 'none', 'project': 'asv'})
-        run_asv_with_conf(conf, 'update', _machine_file=dst_machine)
 
         return dst
 
@@ -316,80 +182,12 @@ def browser(request, pytestconfig):
     return browser
 
 
-@pytest.fixture
-def dummy_packages(request, monkeypatch):
-    """
-    Build dummy wheels for required packages and set PIP_FIND_LINKS + CONDARC
-    """
-    to_build = [('asv_dummy_test_package_1', DUMMY1_VERSION)]
-    to_build += [('asv_dummy_test_package_2', ver) for ver in DUMMY2_VERSIONS]
-
-    tag = [PYTHON_VER1, PYTHON_VER2, to_build, HAS_CONDA]
-
-    with locked_cache_dir(request.config, "asv-wheels", timeout=900, tag=tag) as cache_dir:
-        wheel_dir = os.path.abspath(join(str(cache_dir), 'wheels'))
-
-        monkeypatch.setenv('PIP_FIND_LINKS', str('file://' + wheel_dir))
-
-        condarc = join(wheel_dir, 'condarc')
-        monkeypatch.setenv('CONDARC', str(condarc))
-
-        if os.path.isdir(wheel_dir):
-            assert len(os.listdir(wheel_dir)) > 0
-            return
-
-        tmpdir = join(str(cache_dir), "tmp")
-        if os.path.isdir(tmpdir):
-            shutil.rmtree(tmpdir)
-        os.makedirs(tmpdir)
-
-        try:
-            os.makedirs(wheel_dir)
-            _build_dummy_wheels(tmpdir, wheel_dir, to_build, build_conda=HAS_CONDA)
-        except Exception:
-            shutil.rmtree(wheel_dir)
-            raise
-
-        # Conda packages were installed in a local channel
-        if not WIN:
-            wheel_dir_str = f"file://{wheel_dir}"
-        else:
-            wheel_dir_str = wheel_dir
-
-        with open(condarc, 'w') as f:
-            f.write(f"channels:\n- defaults\n- {wheel_dir_str}")
-
-
 @pytest.fixture(scope="session")
 def basic_html(request):
     with locked_cache_dir(request.config, "asv-test_web-basic_html", timeout=900) as cache_dir:
         tmpdir = join(str(cache_dir), 'cached')
         html_dir, dvcs = _rebuild_basic_html(tmpdir)
         return html_dir, dvcs
-
-
-@pytest.fixture
-def benchmarks_fixture(tmpdir, request: pytest.FixtureRequest):
-    tmpdir = str(tmpdir)
-    os.chdir(tmpdir)
-
-    shutil.copytree(BENCHMARK_DIR, 'benchmark')
-
-    d = {}
-    d.update(ASV_CONF_JSON)
-    d['env_dir'] = "env"
-    d['benchmark_dir'] = 'benchmark'
-    d['environment_type'] = request.config.getoption('environment_type')
-    d['conda_channels'] = ["conda-forge"]
-    d['repo'] = tools.generate_test_repo(tmpdir, [0]).path
-    d['branches'] = ["master"]
-    conf = config.Config.from_json(d)
-
-    repo = get_repo(conf)
-    envs = list(environment.get_environments(conf, None))
-    commit_hash = repo.get_hash_from_name(repo.get_branch_name())
-
-    return conf, repo, envs, commit_hash
 
 
 @pytest.fixture(
@@ -429,7 +227,6 @@ def show_fixture(tmpdir, example_results):
             'results_dir': example_results,
             'repo': tools.generate_test_repo(tmpdir).path,
             'project': 'asv',
-            'environment_type': "shouldn't matter what",
         }
     )
 
@@ -476,15 +273,3 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "flaky" in item.keywords:
             item.add_marker(skip_flaky)
-
-
-@pytest.fixture
-def skip_virtualenv(request: pytest.FixtureRequest):
-    if request.config.getoption('environment_type') == 'virtualenv':
-        pytest.skip('Cannot run this test with virtualenv')
-
-
-@pytest.fixture
-def skip_no_conda(request: pytest.FixtureRequest):
-    if request.config.getoption('environment_type') != 'conda':
-        pytest.skip('Needs to be run with conda')

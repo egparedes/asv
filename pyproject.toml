@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "asv"
-description = "Airspeed Velocity: A simple Python history benchmarking tool"
+description = "Airspeed Velocity: Analysis and visualization of Python benchmark results"
 readme = "README.rst"
 license = "BSD-3-Clause"
 license-files = ["LICENSE.rst"]
@@ -38,15 +38,10 @@ dynamic = [
 dependencies = [
     "asv-runner>=v0.2.1",
     "json5",
-    "build",
     "tabulate",
-    "virtualenv",
     "packaging",
     "importlib-metadata",
-    "tomli; python_version < '3.11'",
     "colorama; platform_system == 'Windows'",
-    "pyyaml; platform_python_implementation != \"PyPy\"",
-    "pympler; platform_python_implementation != \"PyPy\"",
 ]
 
 [project.urls]
@@ -63,14 +58,9 @@ test = [
     "pytest-timeout",
     "pytest-rerunfailures>=10.0",
     "filelock",
-    "numpy",
-    "scipy; platform_python_implementation != \"PyPy\"",
     "feedparser",
-    "selenium",
     "flaky",
-    "pytest-rerunfailures",
     "python-hglib; platform_system != 'Windows'",
-    "pip",
 ]
 doc = [
     "sphinx",
@@ -88,14 +78,7 @@ dev = [
 hg = [
     "python-hglib",
 ]
-plugs = [
-    "asv-bench-memray",
-]
-envs = [
-    "py-rattler",
-    "uv",
-]
-all = ["asv[doc,dev,hg,envs]"]
+all = ["asv[doc,dev,hg]"]
 
 [tool.pytest.ini_options]
 minversion = "6"
