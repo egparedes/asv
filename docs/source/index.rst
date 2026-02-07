@@ -4,11 +4,11 @@ airspeed velocity
 Overview
 --------
 
-**airspeed velocity** (``asv``) is a tool for benchmarking Python
-packages over their lifetime.  Runtime, memory consumption and even
-custom-computed values may be tracked.  The results are displayed in
-an interactive web frontend that requires only a basic static
-webserver to host.
+**airspeed velocity** (``asv``) is a tool for analyzing and
+visualizing Python benchmark results over a project's lifetime.
+Given stored benchmark results, it generates an interactive static
+website for exploring performance trends, detecting regressions, and
+comparing results across commits.
 
 Deployed examples of Airspeed Velocity websites:
 `astropy <https://www.astropy.org/astropy-benchmarks/>`__,
@@ -30,8 +30,6 @@ Development: https://github.com/airspeed-velocity/asv
 
    installing.rst
    using.rst
-   writing_benchmarks.rst
-   tuning.rst
    user_reference.rst
    dev.rst
    step_detection.rst
