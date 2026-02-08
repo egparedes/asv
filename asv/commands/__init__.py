@@ -10,6 +10,7 @@ from . import common_args
 
 # This list is ordered in order of average workflow
 command_order = [
+    'Import',
     'Rm',
     'Publish',
     'Preview',
