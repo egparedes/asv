@@ -1,0 +1,9 @@
+{
+    "arch": "x86_64",
+    "cpu": "AMD EPYC 7763 64-Core Processor",
+    "machine": "build-server",
+    "num_cpu": "128",
+    "os": "Linux (Rocky 9.2)",
+    "ram": "256G",
+    "version": 1
+}

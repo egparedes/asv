@@ -1,0 +1,83 @@
+{
+    "bench_http_get_index": {
+        "latency": {
+            "value": 1100.0,
+            "lower_value": 1050.0,
+            "upper_value": 1150.0
+        },
+        "throughput": {
+            "value": 9800.0,
+            "lower_value": 9400.0,
+            "upper_value": 10200.0
+        }
+    },
+    "bench_http_get_api_users": {
+        "latency": {
+            "value": 2890.0,
+            "lower_value": 2720.0,
+            "upper_value": 3060.0
+        },
+        "throughput": {
+            "value": 3800.0,
+            "lower_value": 3600.0,
+            "upper_value": 4000.0
+        }
+    },
+    "bench_http_post_api_data": {
+        "latency": {
+            "value": 4850.0,
+            "lower_value": 4560.0,
+            "upper_value": 5140.0
+        }
+    },
+    "bench_websocket_echo": {
+        "latency": {
+            "value": 390.0,
+            "lower_value": 365.0,
+            "upper_value": 415.0
+        }
+    },
+    "bench_static_file_serve": {
+        "latency": {
+            "value": 275.0,
+            "lower_value": 255.0,
+            "upper_value": 295.0
+        },
+        "throughput": {
+            "value": 30000.0,
+            "lower_value": 28000.0,
+            "upper_value": 32000.0
+        }
+    },
+    "bench_json_serialize_large": {
+        "latency": {
+            "value": 7600.0,
+            "lower_value": 7300.0,
+            "upper_value": 7900.0
+        }
+    },
+    "bench_db_query_simple": {
+        "latency": {
+            "value": 1800.0,
+            "lower_value": 1680.0,
+            "upper_value": 1920.0
+        }
+    },
+    "bench_template_render": {
+        "latency": {
+            "value": 650.0,
+            "lower_value": 610.0,
+            "upper_value": 690.0
+        }
+    },
+    "bench_binary_upload": {
+        "file-size": {
+            "value": 1048576.0
+        },
+        "build-time": {
+            "value": 2.15,
+            "lower_value": 1.95,
+            "upper_value": 2.35
+        }
+    }
+}

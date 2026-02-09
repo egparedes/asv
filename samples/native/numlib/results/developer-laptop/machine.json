@@ -1,0 +1,9 @@
+{
+    "arch": "x86_64",
+    "cpu": "Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz (6 cores)",
+    "machine": "developer-laptop",
+    "num_cpu": "12",
+    "os": "Linux (Ubuntu 22.04)",
+    "ram": "32G",
+    "version": 1
+}
