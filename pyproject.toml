@@ -38,7 +38,6 @@ dynamic = [
 dependencies = [
     "asv-runner>=v0.2.1",
     "json5",
-    "numba",
     "tabulate",
     "packaging",
     "importlib-metadata",
@@ -53,6 +52,9 @@ Documentation = "https://asv.readthedocs.io/en/stable/"
 asv = "asv.__main__:main"
 
 [project.optional-dependencies]
+speedups = [
+    "numba",
+]
 test = [
     "pytest",
     "pytest-xdist",
@@ -79,7 +81,7 @@ dev = [
 hg = [
     "python-hglib",
 ]
-all = ["asv[doc,dev,hg]"]
+all = ["asv[doc,dev,hg,speedups]"]
 
 [tool.pytest.ini_options]
 minversion = "6"
