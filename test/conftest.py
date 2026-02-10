@@ -24,7 +24,7 @@ except ImportError:
     hglib = None
 
 try:
-    from asv import _rangemedian
+    from asv._rangemedian_numba import RangeMedian as _RangeMedian
 
     HAVE_RANGEMEDIAN = True
 except ImportError:
@@ -248,21 +248,21 @@ def show_fixture(tmpdir, example_results):
         pytest.param(
             "rangemedian",
             marks=pytest.mark.skipif(
-                not HAVE_RANGEMEDIAN, reason="compiled asv._rangemedian required"
+                not HAVE_RANGEMEDIAN, reason="asv._rangemedian_numba required"
             ),
         ),
     ]
 )
 def use_rangemedian(request):
     if request.param == "rangemedian":
-        assert isinstance(step_detect.get_mu_dist([0], [1]), _rangemedian.RangeMedian)
+        assert isinstance(step_detect.get_mu_dist([0], [1]), _RangeMedian)
         return True
     else:
-        step_detect._rangemedian = None
+        step_detect._rangemedian_available = False
 
         def restore():
             if HAVE_RANGEMEDIAN:
-                step_detect._rangemedian = _rangemedian
+                step_detect._rangemedian_available = True
 
         request.addfinalizer(restore)
 
