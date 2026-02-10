@@ -1,0 +1,65 @@
+{
+    "time_linalg.time_matrix_multiply": {
+        "code": "def time_matrix_multiply(self):\n    self.a @ self.b\n",
+        "name": "time_linalg.time_matrix_multiply",
+        "param_names": [],
+        "params": [],
+        "timeout": 60.0,
+        "type": "time",
+        "unit": "seconds",
+        "number": 0,
+        "repeat": 3,
+        "sample_time": 2.0
+    },
+    "time_linalg.time_eigenvalues": {
+        "code": "def time_eigenvalues(self):\n    np.linalg.eigvals(self.a)\n",
+        "name": "time_linalg.time_eigenvalues",
+        "param_names": [],
+        "params": [],
+        "timeout": 60.0,
+        "type": "time",
+        "unit": "seconds",
+        "number": 0,
+        "repeat": 3,
+        "sample_time": 2.0
+    },
+    "time_fft.time_fft_1d": {
+        "code": "def time_fft_1d(self, n):\n    np.fft.fft(self.data[:n])\n",
+        "name": "time_fft.time_fft_1d",
+        "param_names": [
+            "n"
+        ],
+        "params": [
+            [
+                "256",
+                "1024",
+                "4096"
+            ]
+        ],
+        "timeout": 60.0,
+        "type": "time",
+        "unit": "seconds",
+        "number": 0,
+        "repeat": 3,
+        "sample_time": 2.0
+    },
+    "mem_linalg.mem_matrix_creation": {
+        "code": "def mem_matrix_creation(self):\n    return np.zeros((1000, 1000))\n",
+        "name": "mem_linalg.mem_matrix_creation",
+        "param_names": [],
+        "params": [],
+        "timeout": 60.0,
+        "type": "memory",
+        "unit": "bytes"
+    },
+    "track_stats.track_convergence_iterations": {
+        "code": "def track_convergence_iterations(self):\n    return self.solver.iterations\n",
+        "name": "track_stats.track_convergence_iterations",
+        "param_names": [],
+        "params": [],
+        "timeout": 60.0,
+        "type": "track",
+        "unit": "iterations"
+    },
+    "version": 2
+}

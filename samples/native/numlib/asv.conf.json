@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "project": "numlib",
+    "project_url": "https://github.com/example/numlib/",
+    "repo": ".",
+    "dvcs": "git",
+    "branches": ["main"],
+    "environment_type": "virtualenv",
+    "show_commit_url": "https://github.com/example/numlib/commit/",
+    "pythons": ["3.10"],
+    "results_dir": "results",
+    "html_dir": "html",
+    "env_dir": "env"
+}

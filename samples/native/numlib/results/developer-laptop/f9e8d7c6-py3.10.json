@@ -1,0 +1,83 @@
+{
+    "commit_hash": "f9e8d7c6b5a4938271605f4e3d2c1b0a9f8e7d6c",
+    "date": 1700086400000,
+    "env_name": "py3.10",
+    "params": {
+        "arch": "x86_64",
+        "cpu": "Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz (6 cores)",
+        "machine": "developer-laptop",
+        "num_cpu": "12",
+        "os": "Linux (Ubuntu 22.04)",
+        "python": "3.10",
+        "ram": "32G"
+    },
+    "python": "3.10",
+    "requirements": {},
+    "env_vars": {},
+    "result_columns": [
+        "result",
+        "params",
+        "version",
+        "started_at",
+        "duration",
+        "stats_ci_99_a",
+        "stats_ci_99_b",
+        "stats_q_25",
+        "stats_q_75",
+        "stats_number",
+        "stats_repeat",
+        "samples",
+        "profile"
+    ],
+    "results": {
+        "time_linalg.time_matrix_multiply": [
+            0.0028934,
+            [],
+            null,
+            1700086400000,
+            5.0112,
+            [0.002712],
+            [0.003075],
+            [0.002803],
+            [0.002984],
+            [50],
+            [3]
+        ],
+        "time_linalg.time_eigenvalues": [
+            0.014891,
+            [],
+            null,
+            1700086406000,
+            7.8921,
+            [0.01415],
+            [0.01563],
+            [0.01452],
+            [0.01526],
+            [20],
+            [3]
+        ],
+        "time_fft.time_fft_1d": [
+            [7.856e-05, 0.00032415, 0.0013876],
+            [["256", "1024", "4096"]],
+            null,
+            1700086415000,
+            11.872,
+            [7.34e-05, 0.000298, 0.001312],
+            [8.37e-05, 0.000351, 0.001463],
+            [7.6e-05, 0.000311, 0.00135],
+            [8.11e-05, 0.000337, 0.001425],
+            [100, 100, 50],
+            [3, 3, 3]
+        ],
+        "mem_linalg.mem_matrix_creation": [
+            8000000,
+            []
+        ],
+        "track_stats.track_convergence_iterations": [
+            38,
+            []
+        ]
+    },
+    "durations": {},
+    "version": 2
+}

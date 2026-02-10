@@ -1,0 +1,144 @@
+{
+    "time_io.time_csv_read": {
+        "code": "def time_csv_read(self):\n    pd.read_csv(self.csv_path)\n",
+        "name": "time_io.time_csv_read",
+        "param_names": [],
+        "params": [],
+        "timeout": 120.0,
+        "type": "time",
+        "unit": "seconds",
+        "number": 0,
+        "repeat": 3,
+        "sample_time": 2.0
+    },
+    "time_io.time_csv_write": {
+        "code": "def time_csv_write(self):\n    self.df.to_csv(self.out_path)\n",
+        "name": "time_io.time_csv_write",
+        "param_names": [],
+        "params": [],
+        "timeout": 120.0,
+        "type": "time",
+        "unit": "seconds",
+        "number": 0,
+        "repeat": 3,
+        "sample_time": 2.0
+    },
+    "time_io.time_parquet_read": {
+        "code": "def time_parquet_read(self):\n    pd.read_parquet(self.parquet_path)\n",
+        "name": "time_io.time_parquet_read",
+        "param_names": [],
+        "params": [],
+        "timeout": 120.0,
+        "type": "time",
+        "unit": "seconds",
+        "number": 0,
+        "repeat": 3,
+        "sample_time": 2.0
+    },
+    "time_transform.time_groupby_agg": {
+        "code": "def time_groupby_agg(self, ngroups, method):\n    self.df.groupby('key').agg(method)\n",
+        "name": "time_transform.time_groupby_agg",
+        "param_names": [
+            "ngroups",
+            "method"
+        ],
+        "params": [
+            [
+                "100",
+                "1000"
+            ],
+            [
+                "'sum'",
+                "'mean'",
+                "'std'"
+            ]
+        ],
+        "timeout": 120.0,
+        "type": "time",
+        "unit": "seconds",
+        "number": 0,
+        "repeat": 3,
+        "sample_time": 2.0
+    },
+    "time_transform.time_merge": {
+        "code": "def time_merge(self, how):\n    pd.merge(self.left, self.right, on='key', how=how)\n",
+        "name": "time_transform.time_merge",
+        "param_names": [
+            "how"
+        ],
+        "params": [
+            [
+                "'inner'",
+                "'left'",
+                "'outer'"
+            ]
+        ],
+        "timeout": 120.0,
+        "type": "time",
+        "unit": "seconds",
+        "number": 0,
+        "repeat": 3,
+        "sample_time": 2.0
+    },
+    "time_transform.time_sort_values": {
+        "code": "def time_sort_values(self):\n    self.df.sort_values('value')\n",
+        "name": "time_transform.time_sort_values",
+        "param_names": [],
+        "params": [],
+        "timeout": 120.0,
+        "type": "time",
+        "unit": "seconds",
+        "number": 0,
+        "repeat": 3,
+        "sample_time": 2.0
+    },
+    "time_transform.time_pivot_table": {
+        "code": "def time_pivot_table(self):\n    pd.pivot_table(self.df, values='val', index='row', columns='col')\n",
+        "name": "time_transform.time_pivot_table",
+        "param_names": [],
+        "params": [],
+        "timeout": 120.0,
+        "type": "time",
+        "unit": "seconds",
+        "number": 0,
+        "repeat": 3,
+        "sample_time": 2.0
+    },
+    "mem_transform.mem_groupby": {
+        "code": "def mem_groupby(self):\n    return self.df.groupby('key').sum()\n",
+        "name": "mem_transform.mem_groupby",
+        "param_names": [],
+        "params": [],
+        "timeout": 120.0,
+        "type": "memory",
+        "unit": "bytes"
+    },
+    "mem_io.mem_dataframe_from_csv": {
+        "code": "def mem_dataframe_from_csv(self):\n    return pd.read_csv(self.csv_path)\n",
+        "name": "mem_io.mem_dataframe_from_csv",
+        "param_names": [],
+        "params": [],
+        "timeout": 120.0,
+        "type": "memory",
+        "unit": "bytes"
+    },
+    "track_pipeline.track_throughput_rows_per_sec": {
+        "code": "def track_throughput_rows_per_sec(self):\n    return self.rows_processed / self.elapsed\n",
+        "name": "track_pipeline.track_throughput_rows_per_sec",
+        "param_names": [],
+        "params": [],
+        "timeout": 120.0,
+        "type": "track",
+        "unit": "rows/s"
+    },
+    "track_pipeline.track_error_rate": {
+        "code": "def track_error_rate(self):\n    return self.errors / self.total\n",
+        "name": "track_pipeline.track_error_rate",
+        "param_names": [],
+        "params": [],
+        "timeout": 120.0,
+        "type": "track",
+        "unit": "fraction"
+    },
+    "version": 2
+}
