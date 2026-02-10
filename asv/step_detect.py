@@ -6,9 +6,10 @@ import math
 from statistics import median
 
 try:
-    from . import _rangemedian
+    from ._rangemedian_numba import RangeMedian as _RangeMedian
+    _rangemedian_available = True
 except ImportError:
-    _rangemedian = None
+    _rangemedian_available = False
 
 
 #
@@ -556,8 +557,8 @@ class L1Dist:
 
 
 def get_mu_dist(y, w):
-    if _rangemedian is not None:
-        return _rangemedian.RangeMedian(y, w)
+    if _rangemedian_available:
+        return _RangeMedian(y, w)
     else:
         return L1Dist(y, w)
 
