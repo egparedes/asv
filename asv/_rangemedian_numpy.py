@@ -55,35 +55,6 @@ def _compute_weighted_median(y, w, left, right):
     return float(mu), dist
 
 
-def _find_best_partition(y, w, gamma, min_size, max_size, min_pos, max_pos):
-    """
-    Find best partition using Bellman recursion (dynamic programming).
-
-    Uses NumPy arrays for B and p but calls _compute_weighted_median per cell.
-    """
-    size = max_pos - min_pos
-    B = np.empty(size + 1, dtype=np.float64)
-    p = np.zeros(size, dtype=np.int64)
-
-    B[0] = -gamma
-
-    for right in range(min_pos, max_pos):
-        B[right + 1 - min_pos] = np.inf
-
-        aa = max(right + 1 - max_size, min_pos)
-        bb = max(right + 1 - min_size + 1, min_pos)
-
-        for left in range(aa, bb):
-            _, dist = _compute_weighted_median(y, w, left, right)
-
-            b = B[left - min_pos] + gamma + dist
-            if b <= B[right + 1 - min_pos]:
-                B[right + 1 - min_pos] = b
-                p[right - min_pos] = left - 1
-
-    return p
-
-
 class RangeMedian:
     """
     NumPy-based range median computation.
@@ -121,9 +92,36 @@ class RangeMedian:
         size = len(self._y)
         if not (0 < min_size <= max_size and 0 <= min_pos <= max_pos <= size):
             raise ValueError("invalid input indices")
-        p = _find_best_partition(
-            self._y, self._w, gamma, min_size, max_size, min_pos, max_pos
-        )
+
+        y = self._y
+        w = self._w
+        cache = self._cache
+        n = max_pos - min_pos
+
+        B = np.empty(n + 1, dtype=np.float64)
+        p = np.zeros(n, dtype=np.int64)
+
+        B[0] = -gamma
+
+        for right in range(min_pos, max_pos):
+            B[right + 1 - min_pos] = np.inf
+
+            aa = max(right + 1 - max_size, min_pos)
+            bb = max(right + 1 - min_size + 1, min_pos)
+
+            for left in range(aa, bb):
+                key = (left, right)
+                cached = cache.get(key)
+                if cached is None:
+                    cached = _compute_weighted_median(y, w, left, right)
+                    cache[key] = cached
+                _, dist = cached
+
+                b = B[left - min_pos] + gamma + dist
+                if b <= B[right + 1 - min_pos]:
+                    B[right + 1 - min_pos] = b
+                    p[right - min_pos] = left - 1
+
         return p.tolist()
 
     def cleanup_cache(self):

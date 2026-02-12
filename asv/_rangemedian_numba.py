@@ -91,9 +91,9 @@ else:
         # Right half remainder is already in place — no copy needed.
 
     @njit(cache=True)
-    def _timsort_pairs(vals, wts, n, buf_v, buf_w):
+    def _hybrid_sort_pairs(vals, wts, n, buf_v, buf_w):
         """
-        Hybrid sort: insertion sort for small runs, bottom-up merge sort for larger.
+        Hybrid sort: insertion sort for small blocks, bottom-up merge sort for larger.
         Sorts (vals, wts) pairs by vals. O(n*log(n)) with low overhead for small n.
         Only copies the left half during merge (half-copy optimization).
         """
@@ -137,11 +137,11 @@ else:
             tmp_vals[i] = y[left + i]
             tmp_wts[i] = w[left + i]
 
-        # Hybrid sort: insertion sort for small n, timsort-style for large n
+        # Hybrid sort: insertion sort for small n, merge sort for large n
         if n <= _SORT_THRESHOLD:
             _insertion_sort_pairs(tmp_vals, tmp_wts, n)
         else:
-            _timsort_pairs(tmp_vals, tmp_wts, n, buf_v, buf_w)
+            _hybrid_sort_pairs(tmp_vals, tmp_wts, n, buf_v, buf_w)
 
         # Compute midpoint = sum(weights) / 2
         midpoint = 0.0
@@ -167,20 +167,6 @@ else:
 
         return mu, dist
 
-    @njit(cache=True)
-    def _compute_weighted_median_single(y, w, left, right):
-        """
-        Standalone version that allocates its own temp arrays.
-        Used for individual mu/dist calls from Python.
-        """
-        n = right - left + 1
-        tmp_vals = np.empty(n, dtype=np.float64)
-        tmp_wts = np.empty(n, dtype=np.float64)
-        buf_v = np.empty(n, dtype=np.float64)
-        buf_w = np.empty(n, dtype=np.float64)
-        return _compute_weighted_median(
-            y, w, left, right, tmp_vals, tmp_wts, buf_v, buf_w
-        )
 
     @njit(cache=True)
     def _find_best_partition_numba(y, w, gamma, min_size, max_size, min_pos, max_pos):
@@ -238,6 +224,12 @@ else:
             self._y = np.asarray(y, dtype=np.float64)
             self._w = np.asarray(w, dtype=np.float64)
             self._cache = {}
+            # Pre-allocate temp arrays to avoid per-call allocation overhead
+            n = len(y)
+            self._tmp_vals = np.empty(n, dtype=np.float64)
+            self._tmp_wts = np.empty(n, dtype=np.float64)
+            self._buf_v = np.empty(n, dtype=np.float64)
+            self._buf_w = np.empty(n, dtype=np.float64)
 
         def _get_mu_dist(self, left, right):
             key = (left, right)
@@ -246,8 +238,9 @@ else:
                 size = len(self._y)
                 if left < 0 or right < 0 or left >= size or right >= size:
                     raise ValueError("argument out of range")
-                result = _compute_weighted_median_single(
-                    self._y, self._w, left, right
+                result = _compute_weighted_median(
+                    self._y, self._w, left, right,
+                    self._tmp_vals, self._tmp_wts, self._buf_v, self._buf_w,
                 )
                 self._cache[key] = result
             return result
@@ -276,5 +269,7 @@ else:
         """Pre-compile all numba functions to avoid JIT overhead in benchmarks."""
         y = np.array([1.0, 2.0, 3.0], dtype=np.float64)
         w = np.array([1.0, 1.0, 1.0], dtype=np.float64)
-        _compute_weighted_median_single(y, w, 0, 2)
+        tmp = np.empty(3, dtype=np.float64)
+        buf = np.empty(3, dtype=np.float64)
+        _compute_weighted_median(y, w, 0, 2, tmp, tmp.copy(), buf, buf.copy())
         _find_best_partition_numba(y, w, 0.1, 1, 3, 0, 3)
