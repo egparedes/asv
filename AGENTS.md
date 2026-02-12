@@ -4,13 +4,13 @@ This repository contains a fork of ASV (Airspeed Velocity). ASV is a Python benc
 
 ## Tech Stack
 
-- Language:	Python 3.9+ with a C++ extension (_rangemedian.cpp)
+- Language:	Python 3.9+ with an optional numba-accelerated extension (_rangemedian_numba.py)
 - Build:	setuptools + setuptools_scm (version from git tags)
 - Testing:	pytest (with xdist, timeout, rerunfailures plugins)
 - Linting:	ruff
 - Docs:	Sphinx + Furo theme, hosted on ReadTheDocs
 - Web frontend:	Static HTML/JS — jQuery + Flot for charts
-- Key deps:	json5, tabulate, packaging
+- Key deps:	json5, tabulate, packaging, numba (optional)
 
 ## Directory Layout
     
@@ -22,7 +22,6 @@ This repository contains a fork of ASV (Airspeed Velocity). ASV is a Python benc
     test/                  # 20+ pytest modules
     docs/                  # Sphinx documentation
     benchmarks/            # ASV benchmarking itself (dogfooding)
-    setup.py               # C++ extension build
     pyproject.toml         # Project metadata, deps, tool config
     asv.conf.json          # ASV's own benchmark config
 

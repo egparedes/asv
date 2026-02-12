@@ -87,7 +87,11 @@ def _cache_lookup(cache_left, cache_right, cache_mu, cache_dist, left, right):
 @nb.njit(cache=True)
 def _cache_store(cache_left, cache_right, cache_mu, cache_dist,
                  left, right, mu, dist):
-    """Store (left, right) -> (mu, dist) in hash table cache."""
+    """Store (left, right) -> (mu, dist) in hash table cache.
+
+    If the table is full, the entry is silently dropped (this is acceptable
+    since the cache is sized generously at init time).
+    """
     capacity = cache_left.shape[0]
     idx = _hash_key(left, right, capacity)
 
@@ -169,6 +173,14 @@ class RangeMedian:
 
     Drop-in replacement for the C++ _rangemedian.RangeMedian class.
 
+    Uses two cache layers:
+    - A numba-level hash table for ``find_best_partition`` (stays in compiled code)
+    - A Python dict for individual ``mu``/``dist`` calls (avoids numba call overhead)
+
+    After ``find_best_partition`` runs, its numba cache entries are drained into the
+    Python dict so that subsequent ``mu``/``dist`` calls from Python (e.g. in
+    ``merge_pieces``) get immediate cache hits.
+
     Parameters
     ----------
     y : list of float
@@ -190,8 +202,18 @@ class RangeMedian:
         self._nb_cache = _make_cache(cache_capacity)
 
         # Python-level dict cache for fast access from Python callers.
-        # This avoids numba call overhead on cache hits.
         self._py_cache = {}
+
+    def _drain_nb_cache(self):
+        """Copy all numba hash table entries into the Python dict cache."""
+        cache_left, cache_right, cache_mu, cache_dist = self._nb_cache
+        py_cache = self._py_cache
+        for i in range(cache_left.shape[0]):
+            left = cache_left[i]
+            if left != _EMPTY:
+                key = (int(left), int(cache_right[i]))
+                if key not in py_cache:
+                    py_cache[key] = (float(cache_mu[i]), float(cache_dist[i]))
 
     def _get_mu_dist(self, left, right):
         """Compute or retrieve cached (mu, dist) for interval [left, right]."""
@@ -200,7 +222,6 @@ class RangeMedian:
         if result is not None:
             return result
 
-        # Call the numba-compiled computation directly (no numba cache overhead)
         mu, dist = _compute_mu_dist_single(self._y_vals, self._y_weights, left, right)
         self._py_cache[key] = (mu, dist)
         return mu, dist
@@ -248,4 +269,9 @@ class RangeMedian:
             gamma, min_size, max_size, min_pos, max_pos,
             *self._nb_cache
         )
+
+        # Sync numba cache into Python dict so subsequent mu/dist calls
+        # from Python (e.g. merge_pieces) get immediate cache hits.
+        self._drain_nb_cache()
+
         return p.tolist()

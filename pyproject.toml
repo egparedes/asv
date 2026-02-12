@@ -38,7 +38,6 @@ dynamic = [
 dependencies = [
     "asv-runner>=v0.2.1",
     "json5",
-    "numba",
     "tabulate",
     "packaging",
     "importlib-metadata",
@@ -79,7 +78,10 @@ dev = [
 hg = [
     "python-hglib",
 ]
-all = ["asv[doc,dev,hg]"]
+fast = [
+    "numba",
+]
+all = ["asv[doc,dev,hg,fast]"]
 
 [tool.pytest.ini_options]
 minversion = "6"
@@ -127,17 +129,6 @@ quote-style = "preserve"
 
 [tool.setuptools_scm]
 write_to = "asv/_version.py"
-
-[tool.cibuildwheel.linux]
-manylinux-x86_64-image = "manylinux2014"
-manylinux-aarch64-image = "manylinux2014"
-musllinux-x86_64-image = "musllinux_1_2"
-
-[tool.cibuildwheel.macos]
-archs = "x86_64 arm64"
-
-[tool.cibuildwheel.windows]
-archs = ['AMD64']
 
 [tool.setuptools.packages.find]
 where = ["."]
