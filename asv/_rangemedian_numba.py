@@ -9,9 +9,8 @@
 #
 # This is a numba-accelerated replacement for the C++ _rangemedian extension.
 
-import numpy as np
 import numba as nb
-
+import numpy as np
 
 # Sentinel value for empty hash table slots
 _EMPTY = np.int64(-1)
